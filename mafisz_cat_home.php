@@ -17,7 +17,9 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-class Mafisz_Cat_Home extends Module
+use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
+
+class Mafisz_Cat_Home extends Module implements WidgetInterface
 {
     protected $config_form = false;
 
@@ -40,8 +42,7 @@ class Mafisz_Cat_Home extends Module
 
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
 
-        $this->files_location = dirname(__FILE__).'/content/';
-        $this->front_files_location = $this->_path.'content/';
+        $this->templateFile = 'module:mafisz_cat_home/mafisz_cat_home.tpl';
     }
 
     public function install()
@@ -52,10 +53,7 @@ class Mafisz_Cat_Home extends Module
 
         return parent::install() &&
             $this->registerHook('header') &&
-            $this->registerHook('backOfficeHeader') &&
-            $this->registerHook('displayFooterBefore') &&
-            $this->registerHook('displayWrapperTop') &&
-            $this->registerHook('displayHome');
+            $this->registerHook('backOfficeHeader');
     }
 
     public function uninstall()
@@ -136,14 +134,6 @@ class Mafisz_Cat_Home extends Module
     }
 
     /**
-     * Create the structure of your form.
-     */
-    protected function getConfigForm()
-    {
-        
-    }
-
-    /**
      * Set values for the inputs.
      */
     protected function getConfigFormValues()
@@ -220,32 +210,43 @@ class Mafisz_Cat_Home extends Module
         return $this->display(__FILE__, 'views/templates/front/template.tpl');
     }
 
-    public function hookDisplayFooterBefore()
+    public function renderWidget($hookName = null, array $configuration = [])
     {
-        return $this->hookDisplayHome();
+        if (!$this->isCached($this->templateFile, $this->getCacheId('mafisz_cat_home'))) {
+            $this->smarty->assign($this->getWidgetVariables($hookName, $configuration));
+        }
+
+        return $this->fetch($this->templateFile, $this->getCacheId('mafisz_cat_home'));
     }
 
-    public function hookDisplayWrapperTop()
-    {
-        return $this->hookDisplayHome();
-    }
-
-    private function getCategory($id)
+    public function getWidgetVariables($hookName = null, array $configuration = [])
     {
         $lang = $this->context->language->id;
         $shop = $this->context->shop->id;
-        $category = new Category($id, $lang, $shop);
-        $p = array();
-        $p['name'] = $category->name;
-        $p['id'] = $id;
-        $p['link_rewrite'] = $category->link_rewrite;
-        $p['url'] = $this->context->link->getCategoryLink($category);
 
-        return $p;
-    }
+        $count = Configuration::get('MAFISZ_CAT_HOME_COUNT', 1);
+        $cats = Category::getCategories($lang, true, true);
 
-    private function getImage($path)
-    {
-        return $this->front_files_location.$path;
+        $i = 0;
+
+        foreach ($cats[2] as $key => $value) {
+            if ($i++ < $count) {
+                if ($value['infos']['active'] == 1) {
+                    $id = $value['infos']['id_category'];
+                    $category = new Category($id, $lang, $shop);
+                    $cat['name'] = $category->name;
+                    $cat['desc'] = $category->description;
+                    $cat['id'] = $id;
+                    $cat['image'] =  $category->id_image;
+                    $cat['rewrite'] = $category->link_rewrite;
+                    $cat['url'] = $this->context->link->getCategoryLink($category);
+                    $categories[] = $cat;
+                }
+            }
+        }
+
+        return [
+            'categories' => $categories,
+        ];
     }
 }

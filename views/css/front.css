@@ -14,12 +14,19 @@
 
 .mafisz_categories_container{
     margin: 16px auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .mafisz_categories_container > h2{
     font-size: 24px;
     text-align: center;
     margin: 0 auto 1rem;
+}
+
+.mafisz_category_container img{
+    max-width: 100%;
+    height: auto;
 }
 
 .mafisz_categories{
