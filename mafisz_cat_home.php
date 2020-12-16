@@ -48,6 +48,7 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
     public function install()
     {
         Configuration::updateValue('MAFISZ_CAT_HOME_COUNT', 1);
+        Configuration::updateValue('MAFISZ_CAT_HOME_ID', 2);
 
         include(dirname(__FILE__).'/sql/install.php');
 
@@ -59,6 +60,7 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
     public function uninstall()
     {
         Configuration::deleteByName('MAFISZ_CAT_HOME_COUNT');
+        Configuration::deleteByName('MAFISZ_CAT_HOME_ID');
 
         include(dirname(__FILE__).'/sql/uninstall.php');
 
@@ -123,6 +125,13 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
                         'name' => 'MAFISZ_CAT_HOME_COUNT',
                         'desc' => $this->l('Ilość wyświetlanych kategorii'),
                     ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Id kategorii'),
+                        'class' => 'input fixed-width-sm',
+                        'name' => 'MAFISZ_CAT_HOME_ID',
+                        'desc' => $this->l('Id kategorii, z której mają być wyświetlone podkategorie'),
+                    ),
                 ),
                 'submit' => array(
                     'title' => $this->l('Save'),
@@ -141,7 +150,8 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
         $values = [];
 
         $default_config = array(
-            'MAFISZ_CAT_HOME_COUNT' => Configuration::get('MAFISZ_CAT_HOME_COUNT', 1)
+            'MAFISZ_CAT_HOME_COUNT' => Configuration::get('MAFISZ_CAT_HOME_COUNT', 1),
+            'MAFISZ_CAT_HOME_ID' => Configuration::get('MAFISZ_CAT_HOME_ID', 2)
         );
 
         $values = array_merge($values, $default_config);
@@ -155,6 +165,7 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
     protected function postProcess()
     {
         Configuration::updateValue('MAFISZ_CAT_HOME_COUNT', Tools::getValue('MAFISZ_CAT_HOME_COUNT'));
+        Configuration::updateValue('MAFISZ_CAT_HOME_ID', Tools::getValue('MAFISZ_CAT_HOME_ID'));
     }
 
     /**
@@ -177,39 +188,6 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
         $this->context->controller->addCSS($this->_path.'/views/css/front.css');
     }
 
-    public function hookDisplayHome()
-    {
-        $lang = $this->context->language->id;
-        $shop = $this->context->shop->id;
-
-        $count = Configuration::get('MAFISZ_CAT_HOME_COUNT', 1);
-        $cats = Category::getCategories($lang, true, true);
-
-        $i = 0;
-
-        foreach ($cats[2] as $key => $value) {
-            if ($i++ < $count) {
-                if ($value['infos']['active'] == 1) {
-                    $id = $value['infos']['id_category'];
-                    $category = new Category($id, $lang, $shop);
-                    $cat['name'] = $category->name;
-                    $cat['desc'] = $category->description;
-                    $cat['id'] = $id;
-                    $cat['image'] =  $category->id_image;
-                    $cat['rewrite'] = $category->link_rewrite;
-                    $cat['url'] = $this->context->link->getCategoryLink($category);
-                    $categories[] = $cat;
-                }
-            }
-        }
-
-        $this->context->smarty->assign(
-            array('categories' => $categories)
-        );
-
-        return $this->display(__FILE__, 'views/templates/front/template.tpl');
-    }
-
     public function renderWidget($hookName = null, array $configuration = [])
     {
         if (!$this->isCached($this->templateFile, $this->getCacheId('mafisz_cat_home'))) {
@@ -225,20 +203,20 @@ class Mafisz_Cat_Home extends Module implements WidgetInterface
         $shop = $this->context->shop->id;
 
         $count = Configuration::get('MAFISZ_CAT_HOME_COUNT', 1);
+        $parent = Configuration::get('MAFISZ_CAT_HOME_ID', 2);
         $cats = Category::getCategories($lang, true, true);
 
         $i = 0;
 
-        foreach ($cats[2] as $key => $value) {
+        foreach ($cats[$parent] as $key => $value) {
             if ($i++ < $count) {
                 if ($value['infos']['active'] == 1) {
                     $id = $value['infos']['id_category'];
                     $category = new Category($id, $lang, $shop);
                     $cat['name'] = $category->name;
-                    $cat['desc'] = $category->description;
+                    $cat['description'] = $category->description;
                     $cat['id'] = $id;
-                    $cat['image'] =  $category->id_image;
-                    $cat['rewrite'] = $category->link_rewrite;
+                    $cat['link_rewrite'] = $category->link_rewrite;
                     $cat['url'] = $this->context->link->getCategoryLink($category);
                     $categories[] = $cat;
                 }
